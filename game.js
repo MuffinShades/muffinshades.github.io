@@ -8,7 +8,7 @@ let fps = FPS, fpsCount = 0;
 var map = [];
 
 var mapW = 12, mapH = 12, edge = 1;
-const tileSize = 45;
+const tileSize = Math.floor(document.documentElement.clientHeight / (mapH+edge*2));
 
 var highScore = localStorage.getItem("hScore") || 0;
 
@@ -19,6 +19,8 @@ let warnings = [];
 let textGuis = [];
 
 var spawnRate = 60;
+
+var gamePaused = false;
 
 const bombScores = [0, 250, 100];
 let ticks = [null, (5 * (1000 / (1000 / FPS))), (3 * (1000 / (1000 / FPS))), (2 * (1000 / (1000 / FPS))), (4 * (1000 / (1000 / FPS)))];
@@ -614,7 +616,7 @@ function drawMap() {
     }
 }
 
-can.style = 'position: absolute; top: 0; left: 0;';
+//can.style = 'position: absolute; top: 0; left: 0;';
 
 function handleRem(rem, target) {
     while (rem.length > 0) {
@@ -632,8 +634,9 @@ function handleRem(rem, target) {
 }
 
 let rem;
+var time = 0;
 
-setInterval(function() {
+setInterval(function() {if (!gamePaused) {
     if (p.end) return;
     fpsCount ++;
     deltaTime = FPS / fps;
@@ -693,8 +696,9 @@ setInterval(function() {
     ctx.fillStyle = '#fff';
     ctx.strokeStyle = '#000';
     ctx.font = '20px Arial';
-    ctx.strokeText("Health: "+p.health+" Score: "+p.score+" Hit KD: " + p.hitKd + "High Score: "+highScore, 5, 15);
-    ctx.fillText("Health: "+p.health+" Score: "+p.score+" Hit KD: " + p.hitKd + "High Score: "+highScore, 5, 15);
+    let dispTime = Math.floor(time * 100) / 100;
+    ctx.strokeText("Health: "+p.health+" Score: "+p.score + " Time: " + dispTime + "f High Score: "+highScore, 5, 15);
+      ctx.fillText("Health: "+p.health+" Score: "+p.score + " Time: " + dispTime + "f High Score: "+highScore, 5, 15);
     
     spawnInterval.tick();
     spawnInterval.rate -= 0.001;
@@ -706,12 +710,21 @@ setInterval(function() {
         spawnThreshold[i]--;
 
         if (spawnThreshold[i] <= 0){
-            setInterval(spawners[i].fn, spawners[i].rate);
+            setInterval(function() {
+                if (gamePaused) return;
+                spawners[i].fn();
+            }, spawners[i].rate);
 
             spawnThreshold[i] = null;
         }
     }
-}, 1000/FPS)
+
+    time ++;
+} else {
+    ctx.fillStyle = '#999';
+    ctx.font = '30px Arial';
+    ctx.fillText("Press Esc. to return to game...", 100, 100);
+}}, 1000/FPS)
 
 bombThreshold = 90;
 
@@ -719,6 +732,7 @@ const remThreshHold = 70;
 
 
 window.addEventListener('keydown', function(e) {
+    console.log(e);
     switch (e.key) {
         case 'w': {
             p.mu = true;
@@ -750,6 +764,10 @@ window.addEventListener('keydown', function(e) {
         }
         case 'ArrowRight': {
             p.mr = true;
+            break;
+        }
+        case 'Escape': {
+            gamePaused = !gamePaused;
             break;
         }
     }
@@ -792,18 +810,26 @@ window.addEventListener('keyup', function(e) {
     }
 })
 
-setInterval(function() {
+setInterval(function() {if (gamePaused) return;
     fps = fpsCount;
     fpsCount = 0;
 }, 1000);
 
 var bombThresholds = [90, 80];
 
+function genRandomPosXOnMap() {
+    return Math.floor(Math.random() * mapW * tileSize) + edge * tileSize;
+}
+
+function genRandomPosYOnMap() {
+    return Math.floor(Math.random() * mapH * tileSize) + edge * tileSize;
+}
+
 let spawners = [
     {
         fn: function() {
             if (Math.random() * 100 > 70) {
-                warnings.push(new warning(Math.floor(Math.random()*mapW)+1, Math.floor(Math.random()*mapH)+1, 120, 3, 0, function(self) {
+                warnings.push(new warning(Math.floor(Math.random() * mapW)+edge, Math.floor(Math.random() * mapH)+edge, 120, 3, 0, function(self) {
                     map[self.ty][self.tx] = !map[self.ty][self.tx];
                 }))
             }
@@ -814,8 +840,8 @@ let spawners = [
         fn: function() {
             if (Math.random() * 100 > bombThresholds[0]) {
                 projectiles.push(new proj(
-                    Math.random() * can.width,
-                    Math.random() * can.height,
+                    genRandomPosXOnMap(), 
+                    genRandomPosYOnMap(),
                     0,
                     0,
                     15,
@@ -831,8 +857,8 @@ let spawners = [
         fn: function() {
             if (Math.random() * 100 > bombThresholds[1]) {
                 projectiles.push(new proj(
-                    Math.random() * can.width,
-                    Math.random() * can.height,
+                    genRandomPosXOnMap(), 
+                    genRandomPosYOnMap(),
                     0,
                     0,
                     25,
@@ -878,8 +904,8 @@ let spawners = [
         fn: function() {
             if (Math.random() * 100 > 0.7) {
                 projectiles.push(new proj(
-                    Math.random() * can.width,
-                    Math.random() * can.height,
+                    genRandomPosXOnMap(), 
+                    genRandomPosYOnMap(),
                     0,
                     0,
                     35,
@@ -892,8 +918,8 @@ let spawners = [
     {
         fn: function() {
             projectiles.push(new proj(
-                Math.random() * can.width,
-                Math.random() * can.height,
+                genRandomPosXOnMap(), 
+                genRandomPosYOnMap(),
                 0,
                 0,
                 30,
