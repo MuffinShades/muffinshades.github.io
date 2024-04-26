@@ -8,7 +8,7 @@ let fps = FPS, fpsCount = 0;
 var map = [];
 
 var mapW = 12, mapH = 12, edge = 1;
-const tileSize = Math.floor(document.documentElement.clientHeight / (mapH+edge*2));
+const tileSize = /*Math.floor(document.documentElement.clientHeight / (mapH+edge*2))*/ 45;
 
 var highScore = localStorage.getItem("hScore") || 0;
 
@@ -113,8 +113,8 @@ let spawnInterval = new _Interval(spawnRate, function() {
 var p = {
     x: 100,
     y: 100,
-    w: 35,
-    h: 35,
+    w: tileSize * 0.6,
+    h: tileSize * 0.6,
     bSz: 3,
     vx: 0,
     vy: 0,
