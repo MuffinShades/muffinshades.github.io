@@ -113,8 +113,8 @@ let spawnInterval = new _Interval(spawnRate, function() {
 var p = {
     x: 100,
     y: 100,
-    w: tileSize * 0.6,
-    h: tileSize * 0.6,
+    w: 35,
+    h: 35,
     bSz: 3,
     vx: 0,
     vy: 0,
