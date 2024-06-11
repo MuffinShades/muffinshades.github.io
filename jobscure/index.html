@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <h1><i>jObscure</i></h1>
+        <textarea id='jin'></textarea>
+        <button id="obs">Obscure</button>
+        <textarea id="jout"></textarea>
+        <script>
+            const inp = document.getElementById('jin'),out=document.getElementById('jout');
+            var b64 = {
+    table: '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_+',
+    bitCombine: function(bits, i, len) {
+      var r = 0;
+      for (var j = 0; j < len; j++) { //basically just collects all the bits into a int / long
+        r |= bits[i++];
+        r <<= 1;
+      }
+      return r >> 1;
+    },
+    encode: function(dat) {
+      var res = "";
+      
+      var bits = [],v = null;
+      
+      //extract all the bits from the bytes to encode
+      for (var i = 0; i < dat.length; i++) { //cant use of :/
+        v = dat[i];
+        for (var b = 0; b < 8; b++) {
+          bits.push(
+            (v >> b) 
+            & 1
+          );
+        }
+      }
+      
+      //combine the bits into 6 bit chunks from 0-64 and index a table to get the character
+      for (i = 0; i < bits.length; i += 6) {
+        var cmax = i >= bits.length ? 6 - (i - bits.length) : 6;
+        res += this.table[
+          this.bitCombine(bits, i, cmax)
+        ];
+      }
+      return res;
+    },
+    decode: function(dat) {
+      var bits = [];
+      var v;
+      
+      //collect all the bytes
+      for (var i = 0; i < dat.length; i ++) {
+        v = this.table.indexOf(dat[i]); //opposite of the prior table indexing
+        for (var b = 0; b < 6; b++)
+          bits.push(
+            (v >> (5-b)) & 1  
+          );
+      }
+      
+      var res = [];
+      
+      //now assemble as bytes instead of 6 bit chunks
+      var val = 0;
+      for (var b = 0; b < bits.length - 8; b += 8) {
+        val = 0;
+        var cmax = b >= bits.length ? 8 - (b - bits.length) : 8;
+        for (var j = 0; j < cmax; j++) {
+          val |= (bits[b+j] << j);
+        }
+        res.push(val);
+      }
+      
+      return res;
+    }
+  };
+
+            document.querySelector('#obs').addEventListener('click',function(e){
+                var dat = inp.value,key=Math.floor(Math.random()*0xffffff),udat=[];
+
+                for (var i = 0; i < dat.length; i++) {
+                    udat[i] = dat.charCodeAt(i) ^ (key&0xff);
+                }
+
+                var bdat = b64.encode(udat);
+
+                const loader = `(function(k,l){'use strict';const g=k.createElement("script");var m={table:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",g:function(d,e,b){for(var c=0,a=0;a<b;a++)c|=d[e++],c<<=1;return c>>1},encode:function(d){for(var e="",b=[],c,a=0;a<d.length;a++){c=d[a];for(var f=0;8>f;f++)b.push(c>>f&1)}for(a=0;a<b.length;a+=6)e+=this.table[this.g(b,a,a>=b.length?6-(a-b.length):6)];return e},decode:function(d){for(var e=[],b,c=0;c<d.length;c++){b=this.table.indexOf(d[c]);for(var a=0;6>a;a++)e.push(b>>5-a&1)}d=[];for(a=0;a<e.length-8;a+=8){b=0;c=a>=e.length?8-(a-e.length):8;for(var f=0;f<c;f++)b|=e[a+f]<<f;d.push(b)}return d}}.decode("${bdat}"),h;for(h of m)h^=(l^2873225229)&0xff,g.innerText+=String.fromCharCode(h);k.body.appendChild(g)})(null,${key^0xab41f00d});`;
+
+                out.value = loader;
+            })
+        </script>
+    </body>
+</html>

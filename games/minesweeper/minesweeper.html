@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            .bottom-thing {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                position:absolute;
+                bottom:5px;
+            }
+            canvas {
+                border: 2px solid #444;
+            }
+            .cool-menu {
+                padding: 10px;
+                background: '#c3c3c3';
+                border: 1px solid rgb(130,130,130);
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            }
+        </style>
+    </head>
+    <body>
+        <div class='bottom-thing'>
+            Created By muffinshades | 
+            <a href='https://www.twitter.com/muffinshades'>Twitter</a>
+            <a href='https://www.reddit.com/u/muffinshades'>Reddit</a>
+            <a href='https://www.github.com/muffinshades'>Github</a>
+        </div>
+        <div class='cool-menu'>
+            Board Width: <input type='number' id='board_width' value='10' min="1">
+            Board Height: <input type='number' id="board_height" value="10" min="1">
+            Number of Mines: <input type='number' id='n_mines' value='10' min='1'>
+            High Score: <span id='top_score'>999</span>
+        </div>
+        <canvas id='face_canvas' style="position:absolute;"></canvas>
+        <canvas id='timer-canvas' style='position:absolute;'></canvas>
+        <canvas id='c' style="position:absolute;"></canvas>
+        <script>
+            const can = document.getElementById('c');
+            const ctx = can.getContext('2d');
+
+            const face_can = document.getElementById('face_canvas');
+            const face_ctx = face_can.getContext('2d');
+
+            const timer_can = document.getElementById('timer-canvas');
+            const timer_ctx = timer_can.getContext('2d');
+
+            let boardW = 10;
+            let boardH = 10;
+            let n_mines = 10;
+
+            can.width = boardW*32;
+            can.height = boardH*32;
+
+            face_can.width = 46;
+            face_can.height = 46;
+
+            timer_can.height = 46;
+            timer_can.width = 46;
+
+            let face_state = 0;
+
+            let can_x = 0;
+            let can_y = 0;
+
+            function setCanPos() {
+                let _e = document.documentElement;
+                can_y = (_e.clientHeight / 2) - (can.height / 2);
+                can_x = (_e.clientWidth / 2) - (can.width / 2);
+                can.style.top = can_y+"px";
+                can.style.left = can_x+"px";
+                face_can.style.top = can_y-46-7+"px";
+                face_can.style.left = (_e.clientWidth / 2) - 23+"px";
+                timer_can.style.top = can_y-46-7+"px";
+                timer_can.style.left = can_x+"px";
+
+                if (((_e.clientWidth / 2) - 23) - can_x < 75) {
+                    timer_can.style.left = (((_e.clientWidth / 2) - 23) - 75)+"px";
+                }
+            }
+
+            let tiles = [];
+            let clicked = [];
+            let timer = 0;
+
+            for (let i = 0; i < boardH; i++) {
+                tiles[i] = [];
+                clicked[i] = [];
+                for (let j = 0; j < boardW; j++) {
+                    //tiles[i][j] = Math.floor(Math.random()*10);
+                    tiles[i][j] = 0;
+                    clicked[i][j] = 1;
+                }
+            }
+
+            let imgs = new Image();
+            imgs.src = 'spritesheet.png';
+
+            let i_scale = 2;
+
+            var run_timer = false;
+
+            let game_running = false;
+
+            function addMines(n) {
+                for (let i = 0; i < n; i++) {
+                    let dx = Math.floor(Math.random() * boardW);
+                    let dy = Math.floor(Math.random() * boardH);
+                    while (tiles[dy][dx] == 10) {
+                        dx = Math.floor(Math.random() * boardW);
+                        dy = Math.floor(Math.random() * boardH);
+                    }
+                    tiles[dy][dx] = 10;
+                }
+            }
+
+            function drawTimer() {
+                timer_ctx.clearRect(0,0,timer_can.width,timer_can.height);
+
+                let str = timer.toString();
+
+                timer_can.width = Math.max(15 + 25 * str.length,15 + 25 * 2);
+                timer_can.height = 32 + 5;
+
+                if (str.length == 1) str = '0'+str;
+
+                timer_ctx.fillStyle = '#c3c3c3';
+                timer_ctx.fillRect(0,0,timer_can.width,timer_can.height);
+
+                let x = 0;
+
+                for (let i = 0; i < str.length; i++) {
+                    let _char = parseInt(str[i]);
+                    timer_ctx.drawImage(imgs, _char*16*i_scale, 0, 16*i_scale, 16*i_scale, x+5, 5, 32, 32);
+                    x += 25;
+                }
+            }
+
+            function loadNums() {
+                for (let i = 0; i < boardH; i++) {
+                    for (let j = 0; j < boardW; j++) {
+                        if (tiles[i][j] == 10) continue;
+                        let count = 0;
+                        for (let k = -1; k <= 1; k++) {
+                            for (let l = -1; l <= 1; l++) {
+                                if (i+k < 0 || i+k >= boardH || j+l < 0 || j+l >= boardW) continue;
+
+                                if (tiles[i+k][j+l] == 10) count++;
+                            }
+                        }
+
+                        tiles[i][j] = count;
+                    }
+                }
+            }
+
+            function drawBoard() {
+                ctx.clearRect(0,0,can.width,can.height);
+                for (let i = 0; i < boardH; i++) {
+                    for (let j = 0; j < boardW; j++) {
+                        ctx.drawImage(imgs, 16 * clicked[i][j]* i_scale, 16* i_scale, 16* i_scale, 16 * i_scale, j * 32, i * 32, 32, 32);
+                        if (clicked[i][j] == 0 && tiles[i][j] > 0) {
+                            ctx.drawImage(imgs, 16 * (tiles[i][j])* i_scale, 0, 16* i_scale, 16* i_scale, j * 32, i * 32, 32, 32);
+                        }
+                    }
+                }
+            }
+
+            function drawFace() {
+                face_ctx.clearRect(0,0,64,64);
+                face_ctx.drawImage(imgs, 23 * face_state * i_scale, 32 * i_scale, 23*i_scale,23*i_scale,0,0,face_can.width,face_can.height);
+            }
+
+            function resetGame() {
+                boardW = parseInt(document.getElementById('board_width').value) || 0;
+                boardH = parseInt(document.getElementById('board_height').value) || 0;
+                n_mines = Math.min(parseInt(document.getElementById('n_mines').value),boardW*boardH-1) || 0;
+                can.width = boardW*32;
+                can.height = boardH*32;
+                setCanPos();
+
+                for (let i = 0; i < boardH; i++) {
+                    tiles[i] = [];
+                    clicked[i] = [];
+                    for (let j = 0; j < boardW; j++) {
+                        //tiles[i][j] = Math.floor(Math.random()*10);
+                        tiles[i][j] = 0;
+                        clicked[i][j] = 1;
+                    }
+                }
+
+                addMines(n_mines);
+                loadNums();
+                drawBoard();
+                drawFace();
+                timer = 0;
+                drawTimer();
+                n_clicks = 0;
+                game_running = true;
+                run_timer = false;
+            }
+
+            function checkForGameWin() {
+                let tiles_left = 0;
+                let mine_left = 0;
+
+                for (let i = 0; i < boardH; i++) {
+                    for (let j = 0; j < boardW; j++) {
+                        if (clicked[i][j] > 0) tiles_left++;
+                        if (tiles[i][j] == 10 && clicked[i][j] > 0) mine_left++;
+                    }
+                }
+
+                if (mine_left == tiles_left && mine_left == n_mines) {
+                    GameWin();
+                }
+            }
+
+            function GameWin() {
+                run_timer = false;
+                game_running = false;
+                face_state = 3;
+                let t_s = parseInt(document.getElementById('top_score').innerText) || 0;
+                if (timer < t_s) {
+                    document.getElementById('top_score').innerText = timer.toString();
+                }
+                drawFace();
+                drawBoard();
+            }
+
+
+            imgs.onload = function() {
+                resetGame();
+            }
+
+            let n_clicks = 0;
+
+            function _tunnel(i, j) {
+                tiles[i][j] = 0;
+                let clear
+                for (let k = -1; k <= 1; k++) {
+                    for (let l = -1; l <= 1; l++) {
+                        if (i+k < 0 || i+k >= boardH || j+l < 0 || j+l >= boardW) continue;
+                        if (tiles[i+k][j+k] > 0) continue;
+                        _tunnel(i+k,j+l);
+                    }
+                }
+            }
+
+            //tunneling copyright James Weigand 2023-present
+            function tunnel(x, y) {
+                let stack = [];
+
+                stack.push({
+                    x: x,
+                    y: y,
+                })
+
+                while (stack.length > 0) {
+                    let t = stack.pop();
+                    let i = t.y;
+                    let j = t.x;
+                    clicked[i][j] = 0;
+
+                    for (let k = -1; k <= 1; k++) {
+                        for (let l = -1; l <= 1; l++) {
+                            if (i+k < 0 || i+k >= boardH || j+l < 0 || j+l >= boardW) continue;
+                            if ((tiles[i+k][j+l] > 0 && tiles[i][j] > 0) || clicked[i+k][j+l] != 1) continue;
+                            stack.push({
+                                x: j+l,
+                                y: i+k,
+                            })
+                        }
+                    }
+                }
+            }
+
+            function getMili() {
+                let d = new Date();
+                return (d.getHours() * 60 * 60 * 1000) + (d.getMinutes() * 60 * 1000) + (d.getSeconds() * 1000) + d.getMilliseconds();
+            }
+
+            function Chain(j,i) {
+                if (tiles[i][j] == 10) return;
+                let count = 0;
+                for (let k = -1; k <= 1; k++) {
+                    for (let l = -1; l <= 1; l++) {
+                        if (i+k < 0 || i+k >= boardH || j+l < 0 || j+l >= boardW) continue;
+
+                        if (clicked[i+k][j+l] == 2) count++;
+                    }
+                }
+                let game_over = false;
+                let game_over_idx_i = 0;
+                let game_over_idx_j = 0;
+                if (count == tiles[i][j]) {
+                    for (let k = -1; k <= 1; k++) {
+                        for (let l = -1; l <= 1; l++) {
+                            if (i+k < 0 || i+k >= boardH || j+l < 0 || j+l >= boardW) continue;
+
+                            if (clicked[i+k][j+l] == 1) {
+                                clicked[i+k][j+l] = 0;
+                                if (tiles[i+k][j+l] == 10) game_over = true;
+                                game_over_idx_i = j+l;
+                                game_over_idx_j = i+k;
+                            }
+                        }
+                    }
+                    drawBoard();
+                }
+
+                if (game_over) {
+                    endGameLose(game_over_idx_i, game_over_idx_j);
+                }
+            }
+
+            function endGameLose(x, y) {
+                game_running = false;
+                run_timer = false;
+                ctx.clearRect(0,0,can.width,can.height);
+                for (let i = 0; i < boardH; i++) {
+                    for (let j = 0; j < boardW; j++) {
+                        if (i == y && j == x) {
+                            ctx.fillStyle = '#f00';
+                            ctx.fillRect(j * 32, i * 32, 32, 32);
+                        } else {
+                            if (clicked[i][j] == 2 && tiles[i][j] != 10) {
+                                clicked[i][j] = 3;
+                            } else {
+                                clicked[i][j] = 0;
+                            }
+                            ctx.drawImage(imgs, 16 * clicked[i][j]* i_scale, 16* i_scale, 16* i_scale, 16 * i_scale, j * 32, i * 32, 32, 32);
+                        }
+                        if (clicked[i][j] == 0 && tiles[i][j] > 0) {
+                            ctx.drawImage(imgs, 16 * (tiles[i][j])* i_scale, 0, 16* i_scale, 16* i_scale, j * 32, i * 32, 32, 32);
+                        }
+                    }
+                }
+                face_state = 2;
+                drawFace();
+            }
+            let chain = false;
+            let i_save = -1, j_save = -1;
+            let c_time_save = 0;
+
+            can.addEventListener('mousedown', function(e) {
+                if (!game_running) return;
+                let mx = e.pageX - can_x, my = e.pageY - can_y;
+                if (mx >= 0 && mx <= can.width && my >= 0 && my <= can.height) {
+                    let i = Math.floor(mx / 32);
+                    let j = Math.floor(my / 32);
+                    if (e.button == 0) {
+                        if (n_clicks == 0) {
+                            run_timer = true;
+                        }
+                        if (chain && i_save == i && j_save == j && clicked[j][i] == 0) {
+                            Chain(i,j);
+                            return;
+                        }
+                        chain = true;
+                        i_save = i;
+                        j_save = j;
+                        if (clicked[j][i] != 2) {
+                            while (tiles[j][i] == 10 && n_clicks == 0) {
+                                tiles[j][i] = 0;
+                                addMines(1);
+                            }
+                            loadNums();
+                            tunnel(i,j);
+                            if (tiles[j][i] == 10) {
+                                endGameLose(i, j);
+                                return;
+                            }
+                        } else {
+                            clicked[j][i] = 1;
+                        }
+                        n_clicks++;
+                    } else if (e.button == 2) {
+                        if (chain && i_save == i && j_save == j && clicked[j][i] == 0) {
+                            Chain(i,j);
+                            return;
+                        }
+                        chain = true;
+                        i_save = i;
+                        j_save = j;
+                        if (clicked[j][i] != 2 && clicked[j][i] != 0) {
+                            clicked[j][i] = 2;
+                        } else if (clicked[j][i] == 2) {
+                            clicked[j][i] = 1;
+                        }
+                        
+                    }
+                    drawBoard();
+                }
+                checkForGameWin();
+            })
+
+            can.addEventListener('mouseup', function(e) {
+                chain = false;
+            });
+
+            window.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                return false;
+            });
+
+            face_can.addEventListener('mousedown', function() {
+                face_state = 1;
+                drawFace();
+            })
+
+            face_can.addEventListener('mouseup', function() {
+                if (face_state == 1) {
+                    resetGame();
+                }
+                face_state = 0;
+                drawFace();
+            })
+
+            setInterval(function() {
+                if(run_timer) {
+                    timer++;
+                    drawTimer();
+                }
+            },1000);
+
+            setCanPos();
+            drawFace();
+        </script>
+    </body>
+</html>

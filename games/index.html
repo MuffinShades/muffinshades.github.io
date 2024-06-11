@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>muffinshades games</title>
+        <link rel='stylesheet' href='../main.css'>
+        <style>
+            tr {
+                display: flex;
+                background: #333;
+                margin: 5px;
+                border: 1px solid #444;
+                padding: 5px;
+            }
+            tr a {
+                width: 100%;
+                text-align: left;
+                color: #fff;
+                text-decoration: none;
+            }
+            table {
+                background: #444;
+                border: 1px solid #999;
+                padding: 5px;
+                width: calc(100% - 15px);
+            }
+            table h3 {
+                font-weight: lighter;
+                padding: 1px;
+                margin: 1px;
+            }
+            .game-title {
+                list-style:none;
+                cursor: pointer;
+            }
+            .game-title::marker {
+                display: none;
+            }
+            .g-details {
+                text-decoration: none;
+                list-style: none;
+            }
+            .g-sum-container {
+                display: flex;
+            }
+            .b-playbtn {
+                padding: 5px;
+                padding-left: 25px;
+                padding-right: 25px;
+                width: auto;
+                height: contain;
+                margin: 5px;
+                background: rgb(0,150,255);
+                cursor: pointer;
+                color: #fff;
+                border-radius: 5px;
+                border: none;
+                height: 35px;
+                font-size: 15px;
+            }
+        </style>
+    </head>
+    <body>
+        <script src='../gdat.json.js'></script><script src='g-load.js'></script><div class='bg'></div>
+        <div class='g-title'>
+            <h1>muffinshades' Games</h1>
+            <table>
+                <tbody id='g-lcontainer'></tbody>
+            </table>
+        </div>
+    </body>
+</html>
