@@ -35,10 +35,10 @@ const gdat = [
         type: 'game',
         lang: 'JS',
         land_id: 'js',
-        name: 'mario on crack',
-        version: '0.1',
+        name: 'Mario Thing',
+        version: '0',
         releaseDate: '2023',
-        url: '',
+        url: 'games/mariothing/index.html',
         linesOfCode: '1,000+',
         released: false
     },
