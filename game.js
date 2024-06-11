@@ -726,7 +726,7 @@ setInterval(function() {if (!gamePaused) {
     ctx.fillText("Press Esc. to return to game...", 100, 100);
 }}, 1000/FPS)
 
-bombThreshold = 90;
+var bombThreshold = 90;
 
 const remThreshHold = 70;
 
